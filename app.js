@@ -10,7 +10,6 @@ async function fetchNews() {
     fetchFromRSS(`https://www.biospace.com/rss/`)
   ]);
 
-  // Collect only successful results
   const allHeadlines = allFeeds
     .filter(result => result.status === "fulfilled")
     .flatMap(result => result.value);
@@ -24,25 +23,22 @@ async function fetchNews() {
 }
 
 async function fetchFromRSS(feedUrl) {
-  const proxy = "https://api.allorigins.win/get?url=";
-  const encodedUrl = `${proxy}${encodeURIComponent(feedUrl)}`;
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   try {
-    const response = await fetch(encodedUrl);
+    const response = await fetch(apiUrl);
     const data = await response.json();
 
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(data.contents, "text/xml");
-    const items = Array.from(xml.querySelectorAll("item"));
+    if (data.status !== "ok") throw new Error("Invalid RSS data");
 
-    return items.map(item => {
-      const title = item.querySelector("title")?.textContent || "Untitled";
-      const link = item.querySelector("link")?.textContent || "#";
-      const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
+    return data.items.map(item => {
+      const title = item.title || "Untitled";
+      const link = item.link || "#";
+      const pubDate = new Date(item.pubDate || Date.now());
       return { title, link, pubDate };
-    }).filter(item => item.pubDate >= sevenMonthsAgo);
+    }).filter(item => item.pubDate >= sixMonthsAgo);
   } catch (error) {
     console.error(`⚠️ RSS Fetch error for ${feedUrl}:`, error);
     return [];
