@@ -9,8 +9,23 @@
 </head>
 <body>
   <div class="container">
-    <h1>📈 Sector News Pulse</h1>
-    <input type="text" id="sectorInput" placeholder="Enter market sector (e.g. tech, finance)" />
+    <h1>🧬 Sector News Pulse</h1>
+    <p>Select a sector to get real-time sentiment and keyword insights from live news sources.</p>
+
+    <label for="sectorSelect"><strong>Choose a sector:</strong></label>
+    <select id="sectorSelect">
+      <option value="intitle:(fda OR biotech OR clinical trial)">Biotech</option>
+      <option value="intitle:(medtech OR wearable OR implant)">MedTech</option>
+      <option value="intitle:(diagnostics OR early detection)">Diagnostics</option>
+      <option value="intitle:(neurotechnology OR bci OR brain implant)">NeuroTech</option>
+      <option value="intitle:(synthetic biology OR gene editing)">Synthetic Bio</option>
+      <option value="intitle:(AI healthcare OR machine learning diagnostics)">AI in Health</option>
+      <option value="intitle:(robotic surgery OR surgical tech)">Surgical Robotics</option>
+      <option value="intitle:(digital health OR telemedicine)">Digital Health</option>
+      <option value="intitle:(biomaterials OR tissue engineering)">Biomaterials</option>
+      <option value="intitle:(regenerative medicine OR stem cell)">Regenerative Medicine</option>
+    </select>
+
     <button onclick="fetchNews()">Get Pulse</button>
     <div id="result"></div>
   </div>
