@@ -1,8 +1,8 @@
 // This file assumes positiveWords and negativeWords are already defined in keywords.js
 
 async function fetchNews() {
-  const sector = document.getElementById('sectorInput').value || "intitle:(fda OR biotech OR medtech OR diagnostics OR clinical trial)";
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(sector)}&hl=en-US&gl=US&ceid=US:en`;
+  const selectedSector = document.getElementById('sectorSelect').value;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`;
 
   try {
     const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
@@ -12,13 +12,12 @@ async function fetchNews() {
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
-    // Extract headlines
     let headlines = items.map(item => ({
       title: item.querySelector("title").textContent,
       link: item.querySelector("link").textContent
     }));
 
-    // Filter out headlines that don't include any relevant keywords
+    // Filter headlines by presence of keywords
     const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
     headlines = headlines.filter(({ title }) =>
       relevantWords.some(word => title.toLowerCase().includes(word))
