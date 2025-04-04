@@ -8,8 +8,8 @@ async function fetchNews() {
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
     fetchFromRSS(`https://www.technologyreview.com/feed/`),
-    fetchFromRSS(`https://www.fiercebiotech.com/rss.xml`),
-    fetchFromRSS(`https://www.sciencedaily.com/rss/health_medicine.xml`)
+    fetchFromRSS(`https://www.sciencedaily.com/rss/health_medicine.xml`),
+    fetchFromRSS(`https://medicalxpress.com/rss-feed/`)
   ]);
 
   const allHeadlines = allFeeds
@@ -23,6 +23,7 @@ async function fetchNews() {
 
   analyzeSentiment(filtered);
 }
+
 
 async function fetchFromRSS(feedUrl) {
   const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
