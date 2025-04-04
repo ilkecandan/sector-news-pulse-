@@ -42,7 +42,7 @@ async function fetchFromRSS(feedUrl) {
       const link = item.querySelector("link")?.textContent || "#";
       const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
       return { title, link, pubDate };
-    }).filter(item => item.pubDate >= sixMonthsAgo);
+    }).filter(item => item.pubDate >= sevenMonthsAgo);
   } catch (error) {
     console.error(`⚠️ RSS Fetch error for ${feedUrl}:`, error);
     return [];
