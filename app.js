@@ -7,8 +7,9 @@ async function fetchNews() {
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
-    // fetchFromRSS(`https://www.biospace.com/rss/`) ❌ removed because it fails
-    fetchFromRSS(`https://www.technologyreview.com/feed/`) // ✅ MIT Tech Review works well
+    fetchFromRSS(`https://www.technologyreview.com/feed/`),
+    fetchFromRSS(`https://www.fiercebiotech.com/rss.xml`),
+    fetchFromRSS(`https://www.sciencedaily.com/rss/health_medicine.xml`)
   ]);
 
   const allHeadlines = allFeeds
@@ -23,22 +24,23 @@ async function fetchNews() {
   analyzeSentiment(filtered);
 }
 
-
 async function fetchFromRSS(feedUrl) {
-  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetch(proxy);
     const data = await response.json();
 
-    if (data.status !== "ok") throw new Error("Invalid RSS data");
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(data.contents, "text/xml");
+    const items = Array.from(xml.querySelectorAll("item"));
 
-    return data.items.map(item => {
-      const title = item.title || "Untitled";
-      const link = item.link || "#";
-      const pubDate = new Date(item.pubDate || Date.now());
+    return items.map(item => {
+      const title = item.querySelector("title")?.textContent || "Untitled";
+      const link = item.querySelector("link")?.textContent || "#";
+      const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
       return { title, link, pubDate };
     }).filter(item => item.pubDate >= sixMonthsAgo);
   } catch (error) {
