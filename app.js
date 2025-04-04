@@ -3,23 +3,18 @@
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
 
-  const [googleNews, bingNews, yahooNews, redditNews, scitech, biospace] = await Promise.all([
+  const allFeeds = await Promise.allSettled([
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
     fetchFromRSS(`https://www.bing.com/news/search?q=${encodeURIComponent(selectedSector)}&format=RSS`),
-    fetchFromRSS(`https://news.search.yahoo.com/rss?p=${encodeURIComponent(selectedSector)}`),
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
     fetchFromRSS(`https://www.biospace.com/rss/`)
   ]);
 
-  const allHeadlines = [
-    ...googleNews,
-    ...bingNews,
-    ...yahooNews,
-    ...redditNews,
-    ...scitech,
-    ...biospace
-  ];
+  // Collect only successful results
+  const allHeadlines = allFeeds
+    .filter(result => result.status === "fulfilled")
+    .flatMap(result => result.value);
 
   const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
   const filtered = allHeadlines.filter(({ title }) =>
@@ -38,6 +33,7 @@ async function fetchFromRSS(feedUrl) {
   try {
     const response = await fetch(encodedUrl);
     const data = await response.json();
+
     const parser = new DOMParser();
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
@@ -49,7 +45,7 @@ async function fetchFromRSS(feedUrl) {
       return { title, link, pubDate };
     }).filter(item => item.pubDate >= sixMonthsAgo);
   } catch (error) {
-    console.error(`RSS Fetch error for ${feedUrl}:`, error);
+    console.error(`⚠️ RSS Fetch error for ${feedUrl}:`, error);
     return [];
   }
 }
