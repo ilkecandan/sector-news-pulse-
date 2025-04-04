@@ -1,5 +1,6 @@
 // This file assumes positiveWords and negativeWords are already defined in keywords.js
 
+
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
 
@@ -23,6 +24,7 @@ async function fetchNews() {
 
   analyzeSentiment(filtered);
 }
+
 
 
 async function fetchFromRSS(feedUrl) {
