@@ -5,7 +5,6 @@ async function fetchNews() {
 
   const allFeeds = await Promise.allSettled([
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
-    fetchFromRSS(`https://www.bing.com/news/search?q=${encodeURIComponent(selectedSector)}&format=RSS`),
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
     fetchFromRSS(`https://www.biospace.com/rss/`)
