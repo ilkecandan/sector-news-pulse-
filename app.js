@@ -12,12 +12,19 @@ async function fetchNews() {
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
-    let headlines = items.map(item => ({
-      title: item.querySelector("title").textContent,
-      link: item.querySelector("link").textContent
-    }));
+    // Set date range to last 90 days
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // Filter headlines by presence of keywords
+    // Extract and filter by date
+    let headlines = items.map(item => {
+      const title = item.querySelector("title").textContent;
+      const link = item.querySelector("link").textContent;
+      const pubDate = new Date(item.querySelector("pubDate").textContent);
+      return { title, link, pubDate };
+    }).filter(item => item.pubDate >= ninetyDaysAgo);
+
+    // Filter by relevant keywords
     const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
     headlines = headlines.filter(({ title }) =>
       relevantWords.some(word => title.toLowerCase().includes(word))
@@ -66,7 +73,10 @@ function displayResult(pos, neg, keywords, headlines) {
 
   const articlesList = headlines
     .slice(0, 5)
-    .map(({ title, link }) => `<li><a href="${link}" target="_blank">${title}</a></li>`)
+    .map(({ title, link, pubDate }) => {
+      const formattedDate = new Date(pubDate).toLocaleDateString();
+      return `<li><a href="${link}" target="_blank">${title}</a> <small>(${formattedDate})</small></li>`;
+    })
     .join("");
 
   resultDiv.innerHTML = `
@@ -75,7 +85,7 @@ function displayResult(pos, neg, keywords, headlines) {
     <h3>🔥 Keyword Hits:</h3>
     <ul>${keywordList || "<li>No relevant keywords found.</li>"}</ul>
     
-    <h3>📰 Top Headlines:</h3>
+    <h3>📰 Top Headlines (last 90 days):</h3>
     <ul>${articlesList || "<li>No headlines matched your keyword criteria.</li>"}</ul>
   `;
 }
