@@ -21,16 +21,18 @@ async function fetchNews() {
 }
 
 async function fetchFromGoogleNews(query) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=";
+  const googleUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const url = `${proxyUrl}${encodeURIComponent(googleUrl)}`;
+
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   try {
-    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-    const data = await response.json();
-
+    const response = await fetch(url);
+    const xmlText = await response.text();
     const parser = new DOMParser();
-    const xml = parser.parseFromString(data.contents, "text/xml");
+    const xml = parser.parseFromString(xmlText, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
     return items.map(item => {
@@ -82,7 +84,7 @@ async function fetchFromSemanticScholar(query) {
     return json.data.map(item => {
       const title = item.title;
       const link = item.url || "#";
-      const pubDate = new Date(item.year || currentYear, 0); // Semantic Scholar doesn't give exact date
+      const pubDate = new Date(item.year || currentYear, 0); // estimate to Jan 1st of that year
       return { title, link, pubDate };
     }).filter(item => item.pubDate >= ninetyDaysAgo);
   } catch (error) {
