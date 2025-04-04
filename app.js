@@ -21,18 +21,20 @@ async function fetchNews() {
 }
 
 async function fetchFromGoogleNews(query) {
-  const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=";
-  const googleUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-  const url = `${proxyUrl}${encodeURIComponent(googleUrl)}`;
+  const proxy = "https://api.allorigins.win/get?url=";
+  const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const encodedUrl = `${proxy}${encodeURIComponent(googleNewsUrl)}`;
 
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   try {
-    const response = await fetch(url);
-    const xmlText = await response.text();
+    const response = await fetch(encodedUrl);
+    if (!response.ok) throw new Error("Proxy fetch failed");
+
+    const data = await response.json();
     const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, "text/xml");
+    const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
     return items.map(item => {
@@ -84,7 +86,7 @@ async function fetchFromSemanticScholar(query) {
     return json.data.map(item => {
       const title = item.title;
       const link = item.url || "#";
-      const pubDate = new Date(item.year || currentYear, 0); // estimate to Jan 1st of that year
+      const pubDate = new Date(item.year || currentYear, 0);
       return { title, link, pubDate };
     }).filter(item => item.pubDate >= ninetyDaysAgo);
   } catch (error) {
