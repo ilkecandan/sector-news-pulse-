@@ -3,14 +3,22 @@
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
 
-  const [googleNews, bingNews, yahooNews, redditNews] = await Promise.all([
+  const [googleNews, bingNews, yahooNews, redditNews, marketWatch, npr, scitech, medgadget, biospace] = await Promise.all([
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
     fetchFromRSS(`https://www.bing.com/news/search?q=${encodeURIComponent(selectedSector)}&format=RSS`),
     fetchFromRSS(`https://news.search.yahoo.com/rss?p=${encodeURIComponent(selectedSector)}`),
-    fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`)
+    fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
+    fetchFromRSS(`https://www.marketwatch.com/rss/biotech`),
+    fetchFromRSS(`https://www.npr.org/rss/rss.php?id=1007`),
+    fetchFromRSS(`https://scitechdaily.com/feed/`),
+    fetchFromRSS(`https://www.medgadget.com/feed`),
+    fetchFromRSS(`https://www.biospace.com/rss/`)
   ]);
 
-  const allHeadlines = [...googleNews, ...bingNews, ...yahooNews, ...redditNews];
+  const allHeadlines = [
+    ...googleNews, ...bingNews, ...yahooNews, ...redditNews,
+    ...marketWatch, ...npr, ...scitech, ...medgadget, ...biospace
+  ];
 
   // Filter for sentiment keywords
   const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
@@ -24,8 +32,8 @@ async function fetchNews() {
 async function fetchFromRSS(feedUrl) {
   const proxy = "https://api.allorigins.win/get?url=";
   const encodedUrl = `${proxy}${encodeURIComponent(feedUrl)}`;
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 180);
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   try {
     const response = await fetch(encodedUrl);
@@ -39,7 +47,7 @@ async function fetchFromRSS(feedUrl) {
       const link = item.querySelector("link").textContent;
       const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
       return { title, link, pubDate };
-    }).filter(item => item.pubDate >= ninetyDaysAgo);
+    }).filter(item => item.pubDate >= sixMonthsAgo);
   } catch (error) {
     console.error(`RSS Fetch error for ${feedUrl}:`, error);
     return [];
@@ -47,7 +55,6 @@ async function fetchFromRSS(feedUrl) {
 }
 
 function sectorToSubreddit(sector) {
-  // Simple mapping (can expand later)
   const map = {
     biotech: "biotech",
     medtech: "medtech",
