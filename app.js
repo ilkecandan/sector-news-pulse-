@@ -1,7 +1,7 @@
 // This file assumes positiveWords and negativeWords are already defined in keywords.js
 
 async function fetchNews() {
-  const sector = document.getElementById('sectorInput').value || "medtech OR biotech OR deeptech";
+  const sector = document.getElementById('sectorInput').value || "intitle:(fda OR biotech OR medtech OR diagnostics OR clinical trial)";
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(sector)}&hl=en-US&gl=US&ceid=US:en`;
 
   try {
@@ -12,10 +12,17 @@ async function fetchNews() {
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
-    const headlines = items.map(item => ({
+    // Extract headlines
+    let headlines = items.map(item => ({
       title: item.querySelector("title").textContent,
       link: item.querySelector("link").textContent
     }));
+
+    // Filter out headlines that don't include any relevant keywords
+    const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
+    headlines = headlines.filter(({ title }) =>
+      relevantWords.some(word => title.toLowerCase().includes(word))
+    );
 
     analyzeSentiment(headlines);
   } catch (error) {
@@ -70,6 +77,6 @@ function displayResult(pos, neg, keywords, headlines) {
     <ul>${keywordList || "<li>No relevant keywords found.</li>"}</ul>
     
     <h3>📰 Top Headlines:</h3>
-    <ul>${articlesList}</ul>
+    <ul>${articlesList || "<li>No headlines matched your keyword criteria.</li>"}</ul>
   `;
 }
