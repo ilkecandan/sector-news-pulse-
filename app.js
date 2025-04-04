@@ -2,32 +2,66 @@
 
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`;
+
+  const [googleNews, bingNews, yahooNews, redditNews] = await Promise.all([
+    fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
+    fetchFromRSS(`https://www.bing.com/news/search?q=${encodeURIComponent(selectedSector)}&format=RSS`),
+    fetchFromRSS(`https://news.search.yahoo.com/rss?p=${encodeURIComponent(selectedSector)}`),
+    fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`)
+  ]);
+
+  const allHeadlines = [...googleNews, ...bingNews, ...yahooNews, ...redditNews];
+
+  // Filter for sentiment keywords
+  const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
+  const filtered = allHeadlines.filter(({ title }) =>
+    relevantWords.some(word => title.toLowerCase().includes(word))
+  );
+
+  analyzeSentiment(filtered);
+}
+
+async function fetchFromRSS(feedUrl) {
+  const proxy = "https://api.allorigins.win/get?url=";
+  const encodedUrl = `${proxy}${encodeURIComponent(feedUrl)}`;
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   try {
-    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const response = await fetch(encodedUrl);
     const data = await response.json();
-
     const parser = new DOMParser();
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
-    let headlines = items.map(item => ({
-      title: item.querySelector("title").textContent,
-      link: item.querySelector("link").textContent
-    }));
-
-    // Filter headlines by presence of keywords
-    const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
-    headlines = headlines.filter(({ title }) =>
-      relevantWords.some(word => title.toLowerCase().includes(word))
-    );
-
-    analyzeSentiment(headlines);
+    return items.map(item => {
+      const title = item.querySelector("title").textContent;
+      const link = item.querySelector("link").textContent;
+      const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
+      return { title, link, pubDate };
+    }).filter(item => item.pubDate >= ninetyDaysAgo);
   } catch (error) {
-    document.getElementById("result").innerHTML = `<p style="color:red;">⚠️ Could not fetch news. Please try again later.</p>`;
-    console.error(error);
+    console.error(`RSS Fetch error for ${feedUrl}:`, error);
+    return [];
   }
+}
+
+function sectorToSubreddit(sector) {
+  // Simple mapping (can expand later)
+  const map = {
+    biotech: "biotech",
+    medtech: "medtech",
+    diagnostics: "labrats",
+    neurotechnology: "neurotechnology",
+    "AI healthcare": "HealthIT",
+    "robotic surgery": "surgery",
+    "digital health": "digitalhealth",
+    biomaterials: "materials",
+    "regenerative medicine": "regenerativemedicine"
+  };
+
+  const keyword = sector.toLowerCase().split(" ")[0];
+  return map[keyword] || "science";
 }
 
 function analyzeSentiment(headlines) {
@@ -65,16 +99,19 @@ function displayResult(pos, neg, keywords, headlines) {
     .join("");
 
   const articlesList = headlines
-    .slice(0, 5)
-    .map(({ title, link }) => `<li><a href="${link}" target="_blank">${title}</a></li>`)
+    .slice(0, 6)
+    .map(({ title, link, pubDate }) => {
+      const formattedDate = pubDate ? new Date(pubDate).toLocaleDateString() : "";
+      return `<li><a href="${link}" target="_blank">${title}</a> <small>(${formattedDate})</small></li>`;
+    })
     .join("");
 
   resultDiv.innerHTML = `
     <h2>🧠 Innovation Mood: <span class="${pos > neg ? 'positive' : (pos === neg ? 'neutral' : 'negative')}">${mood}</span></h2>
-    
+
     <h3>🔥 Keyword Hits:</h3>
     <ul>${keywordList || "<li>No relevant keywords found.</li>"}</ul>
-    
+
     <h3>📰 Top Headlines:</h3>
     <ul>${articlesList || "<li>No headlines matched your keyword criteria.</li>"}</ul>
   `;
