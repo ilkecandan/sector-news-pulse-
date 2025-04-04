@@ -3,24 +3,24 @@
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
 
-  const [googleNews, bingNews, yahooNews, redditNews, marketWatch, npr, scitech, medgadget, biospace] = await Promise.all([
+  const [googleNews, bingNews, yahooNews, redditNews, scitech, biospace] = await Promise.all([
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
     fetchFromRSS(`https://www.bing.com/news/search?q=${encodeURIComponent(selectedSector)}&format=RSS`),
     fetchFromRSS(`https://news.search.yahoo.com/rss?p=${encodeURIComponent(selectedSector)}`),
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
-    fetchFromRSS(`https://www.marketwatch.com/rss/biotech`),
-    fetchFromRSS(`https://www.npr.org/rss/rss.php?id=1007`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
-    fetchFromRSS(`https://www.medgadget.com/feed`),
     fetchFromRSS(`https://www.biospace.com/rss/`)
   ]);
 
   const allHeadlines = [
-    ...googleNews, ...bingNews, ...yahooNews, ...redditNews,
-    ...marketWatch, ...npr, ...scitech, ...medgadget, ...biospace
+    ...googleNews,
+    ...bingNews,
+    ...yahooNews,
+    ...redditNews,
+    ...scitech,
+    ...biospace
   ];
 
-  // Filter for sentiment keywords
   const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
   const filtered = allHeadlines.filter(({ title }) =>
     relevantWords.some(word => title.toLowerCase().includes(word))
@@ -43,8 +43,8 @@ async function fetchFromRSS(feedUrl) {
     const items = Array.from(xml.querySelectorAll("item"));
 
     return items.map(item => {
-      const title = item.querySelector("title").textContent;
-      const link = item.querySelector("link").textContent;
+      const title = item.querySelector("title")?.textContent || "Untitled";
+      const link = item.querySelector("link")?.textContent || "#";
       const pubDate = new Date(item.querySelector("pubDate")?.textContent || Date.now());
       return { title, link, pubDate };
     }).filter(item => item.pubDate >= sixMonthsAgo);
