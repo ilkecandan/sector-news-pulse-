@@ -2,96 +2,31 @@
 
 async function fetchNews() {
   const selectedSector = document.getElementById('sectorSelect').value;
-
-  const [news, arxiv, s2] = await Promise.all([
-    fetchFromGoogleNews(selectedSector),
-    fetchFromArxiv(selectedSector),
-    fetchFromSemanticScholar(selectedSector)
-  ]);
-
-  const allHeadlines = [...news, ...arxiv, ...s2];
-
-  // Filter by relevant keywords
-  const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
-  const filtered = allHeadlines.filter(({ title }) =>
-    relevantWords.some(word => title.toLowerCase().includes(word))
-  );
-
-  analyzeSentiment(filtered);
-}
-
-async function fetchFromGoogleNews(query) {
-  const proxy = "https://api.allorigins.win/get?url=";
-  const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-  const encodedUrl = `${proxy}${encodeURIComponent(googleNewsUrl)}`;
-
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`;
 
   try {
-    const response = await fetch(encodedUrl);
-    if (!response.ok) throw new Error("Proxy fetch failed");
-
+    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
     const data = await response.json();
+
     const parser = new DOMParser();
     const xml = parser.parseFromString(data.contents, "text/xml");
     const items = Array.from(xml.querySelectorAll("item"));
 
-    return items.map(item => {
-      const title = item.querySelector("title").textContent;
-      const link = item.querySelector("link").textContent;
-      const pubDate = new Date(item.querySelector("pubDate").textContent);
-      return { title, link, pubDate };
-    }).filter(item => item.pubDate >= ninetyDaysAgo);
+    let headlines = items.map(item => ({
+      title: item.querySelector("title").textContent,
+      link: item.querySelector("link").textContent
+    }));
+
+    // Filter headlines by presence of keywords
+    const relevantWords = positiveWords.concat(negativeWords).map(w => w.toLowerCase());
+    headlines = headlines.filter(({ title }) =>
+      relevantWords.some(word => title.toLowerCase().includes(word))
+    );
+
+    analyzeSentiment(headlines);
   } catch (error) {
-    console.error("Google News fetch error:", error);
-    return [];
-  }
-}
-
-async function fetchFromArxiv(query) {
-  const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=15&sortBy=lastUpdatedDate`;
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-  try {
-    const response = await fetch(url);
-    const xmlText = await response.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, "text/xml");
-    const entries = Array.from(xml.querySelectorAll("entry"));
-
-    return entries.map(entry => {
-      const title = entry.querySelector("title").textContent.trim();
-      const link = entry.querySelector("id").textContent;
-      const pubDate = new Date(entry.querySelector("updated").textContent);
-      return { title, link, pubDate };
-    }).filter(item => item.pubDate >= ninetyDaysAgo);
-  } catch (error) {
-    console.error("arXiv fetch error:", error);
-    return [];
-  }
-}
-
-async function fetchFromSemanticScholar(query) {
-  const apiUrl = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=10&fields=title,url,year`;
-
-  try {
-    const response = await fetch(apiUrl);
-    const json = await response.json();
-    const currentYear = new Date().getFullYear();
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    return json.data.map(item => {
-      const title = item.title;
-      const link = item.url || "#";
-      const pubDate = new Date(item.year || currentYear, 0);
-      return { title, link, pubDate };
-    }).filter(item => item.pubDate >= ninetyDaysAgo);
-  } catch (error) {
-    console.error("Semantic Scholar fetch error:", error);
-    return [];
+    document.getElementById("result").innerHTML = `<p style="color:red;">⚠️ Could not fetch news. Please try again later.</p>`;
+    console.error(error);
   }
 }
 
@@ -130,11 +65,8 @@ function displayResult(pos, neg, keywords, headlines) {
     .join("");
 
   const articlesList = headlines
-    .slice(0, 6)
-    .map(({ title, link, pubDate }) => {
-      const formattedDate = pubDate ? new Date(pubDate).toLocaleDateString() : "";
-      return `<li><a href="${link}" target="_blank">${title}</a> <small>(${formattedDate})</small></li>`;
-    })
+    .slice(0, 5)
+    .map(({ title, link }) => `<li><a href="${link}" target="_blank">${title}</a></li>`)
     .join("");
 
   resultDiv.innerHTML = `
@@ -143,7 +75,7 @@ function displayResult(pos, neg, keywords, headlines) {
     <h3>🔥 Keyword Hits:</h3>
     <ul>${keywordList || "<li>No relevant keywords found.</li>"}</ul>
     
-    <h3>📰 Top Results (from past 90 days):</h3>
-    <ul>${articlesList || "<li>No matching results found.</li>"}</ul>
+    <h3>📰 Top Headlines:</h3>
+    <ul>${articlesList || "<li>No headlines matched your keyword criteria.</li>"}</ul>
   `;
 }
