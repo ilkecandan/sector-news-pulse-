@@ -7,7 +7,8 @@ async function fetchNews() {
     fetchFromRSS(`https://news.google.com/rss/search?q=${encodeURIComponent(selectedSector)}&hl=en-US&gl=US&ceid=US:en`),
     fetchFromRSS(`https://www.reddit.com/r/${sectorToSubreddit(selectedSector)}/.rss`),
     fetchFromRSS(`https://scitechdaily.com/feed/`),
-    fetchFromRSS(`https://www.biospace.com/rss/`)
+    // fetchFromRSS(`https://www.biospace.com/rss/`) ❌ removed because it fails
+    fetchFromRSS(`https://www.technologyreview.com/feed/`) // ✅ MIT Tech Review works well
   ]);
 
   const allHeadlines = allFeeds
@@ -21,6 +22,7 @@ async function fetchNews() {
 
   analyzeSentiment(filtered);
 }
+
 
 async function fetchFromRSS(feedUrl) {
   const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
