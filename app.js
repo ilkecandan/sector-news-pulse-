@@ -25,7 +25,7 @@ async function fetchFromRSS(feedUrl) {
   const proxy = "https://api.allorigins.win/get?url=";
   const encodedUrl = `${proxy}${encodeURIComponent(feedUrl)}`;
   const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 180);
 
   try {
     const response = await fetch(encodedUrl);
